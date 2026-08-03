@@ -257,10 +257,27 @@ const OptionList: React.ForwardRefRenderFunction<RefOptionListProps, {}> = (_, r
     },
   }));
 
-  // Skip group headers to match native <select> announcements with <optgroup>
-  const optionPositions = React.useMemo(() => {
+  // `optionPositions`: skip group headers to match native <select> announcements with <optgroup>
+  // `itemGroups`: owning group header of each option, so lookups stay O(1) while rendering
+  const [optionPositions, itemGroups] = React.useMemo(() => {
     let count = 0;
-    return memoFlattenOptions.map((item) => (item.group ? count : (count += 1)));
+    let group: FlattenOptionData<BaseOptionType> | null = null;
+
+    const positions: number[] = [];
+    const groups: (FlattenOptionData<BaseOptionType> | null)[] = [];
+
+    memoFlattenOptions.forEach((item) => {
+      if (item.group) {
+        group = item;
+        positions.push(count);
+        groups.push(null);
+      } else {
+        positions.push((count += 1));
+        groups.push(item.groupOption ? group : null);
+      }
+    });
+
+    return [positions, groups] as const;
   }, [memoFlattenOptions]);
 
   // ========================== Render ==========================
@@ -315,18 +332,6 @@ const OptionList: React.ForwardRefRenderFunction<RefOptionListProps, {}> = (_, r
     );
   };
 
-  const getGroupItem = (index: number) => {
-    for (let i = index; i >= 0; i -= 1) {
-      const current = memoFlattenOptions[i];
-      if (current?.group) {
-        return current;
-      }
-    }
-    // Unreachable: a grouped option always has a preceding group header
-    /* istanbul ignore next */
-    return null;
-  };
-
   // Nest options inside `role="group"` wrappers
   const renderHiddenItems = () => {
     const segments: {
@@ -340,7 +345,7 @@ const OptionList: React.ForwardRefRenderFunction<RefOptionListProps, {}> = (_, r
         return;
       }
 
-      const groupItem = item.groupOption ? getGroupItem(index) : null;
+      const groupItem = itemGroups[index];
       const lastSegment = segments[segments.length - 1];
 
       if (lastSegment && lastSegment.group === groupItem) {
@@ -360,7 +365,7 @@ const OptionList: React.ForwardRefRenderFunction<RefOptionListProps, {}> = (_, r
         <div
           key={group.key}
           role="group"
-          aria-label={isTitleType(groupLabel) ? String(groupLabel) : null}
+          aria-label={group.data.title ?? (isTitleType(groupLabel) ? String(groupLabel) : null)}
         >
           {indexes.map(renderItem)}
         </div>

@@ -343,6 +343,26 @@ describe('Select.Accessibility', () => {
       expect(topLevelOption).toHaveAttribute('aria-setsize', '4');
     });
 
+    it('should use group title in aria-label', () => {
+      render(
+        <Select
+          id="virtual-select"
+          open
+          options={[
+            {
+              label: 'Group',
+              title: 'Group title',
+              options: [{ value: '1' }, { value: '2' }],
+            },
+          ]}
+        />,
+      );
+
+      const hiddenContainer = document.querySelector('#virtual-select_list');
+      const groupWrapper = hiddenContainer.querySelector('div[role="group"]');
+      expect(groupWrapper).toHaveAttribute('aria-label', 'Group title');
+    });
+
     it('should have correct aria and role attributes in virtual false', () => {
       render(
         <Select
