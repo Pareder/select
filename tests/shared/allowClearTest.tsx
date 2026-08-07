@@ -23,6 +23,22 @@ export default function allowClearTest(mode: any, value: any) {
       fireEvent(clear, mouseDownEvent);
       expect(mouseDownEvent.defaultPrevented).toBe(true);
     });
+    it('keeps Enter/Space on the clear button local to it', () => {
+      // The root handler prevents default on Enter/Space to open the dropdown.
+      // If it received them from the clear button, the native button activation
+      // would be canceled and no `click` (thus no clear) would ever happen.
+      ['Enter', ' '].forEach((key) => {
+        const { container } = render(<Select mode={mode} value={value} allowClear />);
+        const clear = container.querySelector('.rc-select-clear');
+        const keyDownEvent = createEvent.keyDown(clear, { key });
+
+        fireEvent(clear, keyDownEvent);
+
+        expect(keyDownEvent.defaultPrevented).toBe(false);
+        expect(container.querySelector('.rc-select-open')).toBeFalsy();
+      });
+    });
+
     it('clears value', () => {
       const onClear = jest.fn();
       const onChange = jest.fn();
