@@ -23,21 +23,6 @@ export default function allowClearTest(mode: any, value: any) {
       fireEvent(clear, mouseDownEvent);
       expect(mouseDownEvent.defaultPrevented).toBe(true);
     });
-    it('keeps Enter/Space on the clear button local to it', () => {
-      // The root handler prevents default on Enter/Space to open the dropdown.
-      // If it received them from the clear button, the native button activation
-      // would be canceled and no `click` (thus no clear) would ever happen.
-      ['Enter', ' '].forEach((key) => {
-        const { container } = render(<Select mode={mode} value={value} allowClear />);
-        const clear = container.querySelector('.rc-select-clear');
-        const keyDownEvent = createEvent.keyDown(clear, { key });
-
-        fireEvent(clear, keyDownEvent);
-
-        expect(keyDownEvent.defaultPrevented).toBe(false);
-        expect(container.querySelector('.rc-select-open')).toBeFalsy();
-      });
-    });
 
     it('clears value', () => {
       const onClear = jest.fn();
@@ -77,6 +62,48 @@ export default function allowClearTest(mode: any, value: any) {
       expect(onDeselect).not.toBeCalled();
       expect(container.querySelector('input').value).toEqual('');
       expect(onClear).toHaveBeenCalled();
+    });
+
+    it('clears value with keyboard', () => {
+      ['Enter', ' '].forEach((key) => {
+        const onClear = jest.fn();
+        const onChange = jest.fn();
+        const onDeselect = jest.fn();
+        const useArrayValue = ['tags', 'multiple'].includes(mode);
+
+        const { container } = render(
+          <Select
+            defaultValue={useArrayValue ? ['1'] : '1'}
+            mode={mode}
+            allowClear
+            onClear={onClear}
+            onChange={onChange}
+            onDeselect={onDeselect}
+          >
+            <Option value="1">1</Option>
+            <Option value="2">2</Option>
+          </Select>,
+        );
+        const clear = container.querySelector('.rc-select-clear');
+        const keyDownEvent = createEvent.keyDown(clear, { key });
+
+        fireEvent(clear, keyDownEvent);
+
+        expect(keyDownEvent.defaultPrevented).toBe(false);
+        expect(container.querySelector('.rc-select-open')).toBeFalsy();
+
+        // The native button activation should fire a click
+        fireEvent.click(clear);
+
+        if (useArrayValue) {
+          expect(onChange).toHaveBeenCalledWith([], []);
+        } else {
+          expect(onChange).toHaveBeenCalledWith(undefined, undefined);
+        }
+        expect(onDeselect).not.toBeCalled();
+        expect(container.querySelector('input').value).toEqual('');
+        expect(onClear).toHaveBeenCalled();
+      });
     });
   });
 }
